@@ -1,25 +1,59 @@
-name: .NET
+name: Build, Test, Deploy
 
-on:
+on:  
   push:
-    branches: [ main ]
-  pull_request:
-    branches: [ main ]
+    branches: main
 
 jobs:
-  build:
-
+  build-and-deploy:
     runs-on: ubuntu-latest
-
     steps:
     - uses: actions/checkout@v2
-    - name: Setup .NET
+    
+    - name: Setup .NET Core
       uses: actions/setup-dotnet@v1
       with:
-        dotnet-version: 3.1.301
-    - name: Restore dependencies
+        dotnet-version: 5.0.x
+  # Restore, Build, ad Test Code Set
+    - name: Install dependencies
       run: dotnet restore
+    
     - name: Build
-      run: dotnet build --no-restore
+      run: dotnet build --configuration Release --no-restore
+    
     - name: Test
-      run: dotnet test --no-build --verbosity normal
+      run: dotnet test --no-restore --verbosity normal
+    
+    - name: Publish
+      run: dotnet publish -c Release -o 'artifacts/tokenservice'
+
+    - uses: azure/actions/login@v1
+      with:
+        creds: ${{ secrets.AZURE_CREDENTIALS }}
+
+  # Create the App Service w/ARM Template
+    - name: ARM Deploy - Create App Service Resoures
+      uses: azure/arm-deploy@v1
+      with:
+        subscriptionId: ${{ secrets.AZURE_SUBSCRIPTION }}
+        resourceGroupName: ${{ secrets.AZURE_RG }}
+        template: .github/workflows/app-service-template.json
+        parameters: BaseName=${{ secrets.APP_BASENAME }} AzureAppConfig:Endpoint=${{ secrets.APPCONFIG_ENDPOINT }}
+  
+  # Deploy code to app service
+    - name: Deploy App Service
+      uses: azure/webapps-deploy@v2
+      with: 
+            app-name: ${{ secrets.APPSERVICE_NAME }}
+            package: 'artifacts/tokenservice'
+
+  # Post Deployment Configuration
+    - name: Post Deploy Configuration
+      uses: azure/CLI@v1
+      with:        
+        azcliversion: 2.0.72
+        inlineScript: |
+          id=$(az webapp identity assign -n ${{ secrets.APPSERVICE_NAME }} -g ${{ secrets.AZURE_RG }} | jq -r '.principalId')
+          az keyvault set-policy -n ${{ secrets.VAULT_NAME }} --secret-permissions get list --object-id $id
+          acId=$(az appconfig show --name ${{ secrets.APP_CONFIGURATION_NAME }} | jq -r '.id')
+          az role assignment create --assignee-object-id $id --role "App Configuration Data Reader" --scope $acId

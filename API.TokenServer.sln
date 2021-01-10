@@ -3,7 +3,13 @@ Microsoft Visual Studio Solution File, Format Version 12.00
 # Visual Studio Version 16
 VisualStudioVersion = 16.0.30804.86
 MinimumVisualStudioVersion = 10.0.40219.1
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "API.TokenServer", "API.TokenServer\API.TokenServer.csproj", "{D47CBA76-BCF7-4ABC-8A80-DA6308DC5DE5}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "API.TokenServer", "API.TokenServer\API.TokenServer.csproj", "{D47CBA76-BCF7-4ABC-8A80-DA6308DC5DE5}"
+EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Templates", "Templates", "{4DF853ED-3D38-485F-927D-5DDCF7F45718}"
+	ProjectSection(SolutionItems) = preProject
+		app-service-template.json = app-service-template.json
+		.github\workflows\deploy-resources.yml = .github\workflows\deploy-resources.yml
+	EndProjectSection
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
